@@ -7,3 +7,4 @@ dev.db
 src/generated/
 .claude/
 .vercel
+.env.*
