@@ -1,41 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
-    setLoading(false);
+    try {
+      const csrfRes = await fetch("/api/auth/csrf");
+      const { csrfToken } = await csrfRes.json();
 
-    if (result?.error) {
+      const res = await fetch("/api/auth/callback/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          csrfToken,
+          email,
+          password,
+          json: "true",
+        }),
+        redirect: "follow",
+      });
+
+      if (res.ok) {
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+
+        if (session?.user) {
+          window.location.href = "/";
+          return;
+        }
+      }
+
       setError("メールアドレスまたはパスワードが正しくありません");
-      return;
+    } catch {
+      setError("ログインに失敗しました。もう一度お試しください。");
+    } finally {
+      setLoading(false);
     }
-
-    window.location.href = "/";
   }
 
   return (
     <div className="gradient-bg relative overflow-hidden flex items-center justify-center min-h-screen px-4">
-      {/* Background orbs */}
       <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
       <div className="bg-orb bg-orb-3" />
@@ -47,9 +63,7 @@ export default function LoginPage() {
               <LogIn className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">勤怠管理システム</h1>
-            <p className="text-white/60 text-sm mt-1">
-              アカウントにログイン
-            </p>
+            <p className="text-white/60 text-sm mt-1">アカウントにログイン</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,10 +72,9 @@ export default function LoginPage() {
                 メールアドレス
               </label>
               <input
+                name="email"
                 type="email"
                 placeholder="example@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
                 className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/20 transition-all"
@@ -72,9 +85,8 @@ export default function LoginPage() {
                 パスワード
               </label>
               <input
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
                 className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/20 transition-all"
