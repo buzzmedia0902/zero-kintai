@@ -6,3 +6,4 @@ prisma/dev.db
 dev.db
 src/generated/
 .claude/
+.vercel
