@@ -29,10 +29,12 @@ export default function LoginPage() {
           password,
           json: "true",
         }),
-        redirect: "follow",
+        redirect: "manual",
       });
 
-      if (res.ok) {
+      // 302 redirect = success, 200 with error = failure
+      if (res.status === 302 || res.ok) {
+        // Verify session was actually created
         const sessionRes = await fetch("/api/auth/session");
         const session = await sessionRes.json();
 
